@@ -1,0 +1,71 @@
+# Data
+```{r}
+library(tidyverse)# Load tidyverse
+library(ggplot2)# Load ggplot2
+house<-as.data.frame(read.csv("House_Rent_Dataset.csv")) #load data
+dim(house)#look at the dimensions of the dataset
+head(house)#look at the first severl rows of the data
+summary(house)
+```
+# Data preparation
+
+```{r}
+#make sure variables are normally distributed
+house |>
+  ggplot(aes(x = Rent)) + #create a plot
+  geom_histogram() #add scatter points to see if it's normally distributed
+
+house$Rent <- log(house$Rent) #rescale the variable
+
+house |>
+  ggplot(aes(x = Rent)) + #create a plot
+  geom_histogram() #show the rescaled variable
+
+house <-house|>
+  select(Size,Rent) #select the columns that'll be used
+
+#remove outliers for the Size category
+quartiles <- quantile(house$Size, probs=c(.25, .75), na.rm = FALSE) #calculate the first quartile and third quartile
+IQR <- IQR(house$Size) #calculate the IQR of Size variable
+ 
+Lower <- quartiles[1] - 1.5*IQR #calculate the lower bound
+Upper <- quartiles[2] + 1.5*IQR #calculate the higher bound
+ 
+house <- subset(house, house$Size > Lower & house$Size < Upper) #remove outliers that beyond the higher bound or below the lower bound
+head(house) # show the results
+```
+
+# Linear Regression & Visualization
+
+```{r}
+#generate a linear regression table
+lm_Size <- lm(Rent ~ Size,
+         data = house) #create a linear regression model
+summary(lm_Size)#show the results
+```
+```{r}
+library(modelsummary) #load the package
+modelsummary::modelsummary(lm_Size, stars = TRUE) #fit the data and show the results
+```
+
+```{r}
+house |>
+  ggplot(aes(y = Rent, x = Size)) + #create a plot
+  geom_point() + #add scatter points to the plot
+  geom_smooth(method = "lm", se = TRUE)+ #add a smooth line showing the regression line
+  labs(x='Size (Square Feet)',
+       y='Rent',
+       title='Linear Regression between Size and Rent') #label the x-axis, y-axis, and title
+```
+
+```{r, echo = TRUE, eval = TRUE, comment = NA, message = FALSE, warning = FALSE}
+plot(lm_Size, which = 1) #create a Residuals vs Fitted plot
+```
+
+```{r, echo = TRUE, eval = TRUE, comment = NA, message = FALSE, warning = FALSE, fig.align = "center", fig.height = 4, fig.width = 4}
+plot(lm_Size, which = 2) #create a Q-Q plot
+```
+
+```{r, echo = TRUE, eval = TRUE, comment = NA, message = FALSE, warning = FALSE}
+shapiro.test(residuals(lm_Size)) #calculate the Shapiro-Wilk normality test
+```
